@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
+import java.util.List;
 
 public interface TeacherRepository extends JpaRepository<Teacher, Long> {
 
@@ -19,4 +20,6 @@ public interface TeacherRepository extends JpaRepository<Teacher, Long> {
         WHERE t.user.id = :userId
     """)
     Optional<Teacher> findWithUserByUserId(@Param("userId") Long userId);
+
+    List<Teacher> findAllByUserDeletedAtIsNullOrderByUserNameAsc();
 }

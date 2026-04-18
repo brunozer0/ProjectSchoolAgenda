@@ -33,9 +33,10 @@ public class NoteService {
         RoleName role = author.getRole().getName();
 
         if (role == RoleName.RESPONSIBLE) {
-            throw new ForbiddenException("Responsibles cannot create notes.");
+            throw new ForbiddenException("Responsaveis nao podem criar anotacoes.");
         }
 
+        // Teacher can only create notes for students in their own classroom.
         if (role == RoleName.TEACHER) {
             assertTeacherOwnsStudent(author.getId(), student.getId());
         }
@@ -46,7 +47,7 @@ public class NoteService {
         note.setTitle(request.getTitle());
         note.setContent(request.getContent());
         note.setType(request.getType());
-        note.setVisibleToResponsible(request.isVisibleToResponsible()); // troque para getVisibleToResponsible() se seu DTO foi ajustado
+        note.setVisibleToResponsible(request.isVisibleToResponsible());
 
         return NoteResponse.from(noteRepository.save(note));
     }
@@ -58,11 +59,12 @@ public class NoteService {
         RoleName role = author.getRole().getName();
 
         if (role == RoleName.RESPONSIBLE) {
-            throw new ForbiddenException("Responsibles cannot edit notes.");
+            throw new ForbiddenException("Responsaveis nao podem editar anotacoes.");
         }
 
+        // Teacher can only edit notes created by themselves.
         if (role == RoleName.TEACHER && !note.getAuthor().getId().equals(author.getId())) {
-            throw new ForbiddenException("Teachers can only edit their own notes.");
+            throw new ForbiddenException("Professores so podem editar as proprias anotacoes.");
         }
 
         if (request.getTitle() != null) {
@@ -91,11 +93,12 @@ public class NoteService {
         RoleName role = author.getRole().getName();
 
         if (role == RoleName.RESPONSIBLE) {
-            throw new ForbiddenException("Responsibles cannot delete notes.");
+            throw new ForbiddenException("Responsaveis nao podem excluir anotacoes.");
         }
 
+        // Teacher can only delete notes created by themselves.
         if (role == RoleName.TEACHER && !note.getAuthor().getId().equals(author.getId())) {
-            throw new ForbiddenException("Teachers can only delete their own notes.");
+            throw new ForbiddenException("Professores so podem excluir as proprias anotacoes.");
         }
 
         note.setDeletedAt(LocalDateTime.now());
@@ -105,26 +108,30 @@ public class NoteService {
     public List<NoteResponse> listByStudent(Long studentId, NoteStatus status, String requesterEmail) {
         User requester = getActiveUser(requesterEmail);
         RoleName role = requester.getRole().getName();
+        // Keep behavior consistent: listing should fail with 404 when student does not exist/is deleted.
+        Student student = getActiveStudent(studentId);
 
         if (role == RoleName.RESPONSIBLE) {
             Responsible responsible = responsibleRepository.findByUserId(requester.getId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Responsible not found"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Responsavel nao encontrado"));
 
-            if (!responsibleStudentRepository.existsByResponsibleIdAndStudentId(responsible.getId(), studentId)) {
-                throw new ForbiddenException("Access denied to this student's notes.");
+            // Responsible can only access notes of linked students.
+            if (!responsibleStudentRepository.existsByResponsibleIdAndStudentId(responsible.getId(), student.getId())) {
+                throw new ForbiddenException("Acesso negado as anotacoes deste aluno.");
             }
 
-            return noteRepository.findVisibleByStudentId(studentId, status)
+            return noteRepository.findVisibleByStudentId(student.getId(), status)
                     .stream()
                     .map(NoteResponse::from)
                     .toList();
         }
 
+        // Teacher can only access notes from their own students.
         if (role == RoleName.TEACHER) {
-            assertTeacherOwnsStudent(requester.getId(), studentId);
+            assertTeacherOwnsStudent(requester.getId(), student.getId());
         }
 
-        return noteRepository.findByStudentId(studentId, status)
+        return noteRepository.findByStudentId(student.getId(), status)
                 .stream()
                 .map(NoteResponse::from)
                 .toList();
@@ -132,24 +139,24 @@ public class NoteService {
 
     private void assertTeacherOwnsStudent(Long teacherUserId, Long studentId) {
         Teacher teacher = teacherRepository.findByUserId(teacherUserId)
-                .orElseThrow(() -> new ResourceNotFoundException("Teacher not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Professor nao encontrado"));
 
         if (!studentRepository.existsByIdAndClassroomTeacherIdAndDeletedAtIsNull(studentId, teacher.getId())) {
-            throw new ForbiddenException("Student does not belong to your classroom.");
+            throw new ForbiddenException("O aluno nao pertence a sua turma.");
         }
     }
 
     private User getActiveUser(String email) {
         return userRepository.findByEmailAndDeletedAtIsNull(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario nao encontrado"));
     }
 
     private Student getActiveStudent(Long id) {
         Student student = studentRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Student not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Aluno nao encontrado"));
 
         if (student.getDeletedAt() != null) {
-            throw new ResourceNotFoundException("Student not found");
+            throw new ResourceNotFoundException("Aluno nao encontrado");
         }
 
         return student;
@@ -157,10 +164,10 @@ public class NoteService {
 
     private Note getActiveNote(Long id) {
         Note note = noteRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Note not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Anotacao nao encontrada"));
 
         if (note.isDeleted()) {
-            throw new ResourceNotFoundException("Note not found");
+            throw new ResourceNotFoundException("Anotacao nao encontrada");
         }
 
         return note;

@@ -1,5 +1,6 @@
 package com.schoolagenda.domain.entity;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.schoolagenda.domain.enums.Gender;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -32,6 +33,11 @@ public class Student {
     @NotNull
     @Column(nullable = false)
     private LocalDate birthDate;
+
+    @NotNull
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private Gender gender;
 
     @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)

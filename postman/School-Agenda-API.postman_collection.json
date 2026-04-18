@@ -1,0 +1,641 @@
+{
+  "info": {
+    "_postman_id": "7eebeb62-76db-4ee8-bd8e-9ecae01f6f61",
+    "name": "School Agenda API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login Director",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "if (json && json.token) {",
+                  "  pm.collectionVariables.set('tokenDirector', json.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{directorEmail}}\",\n  \"password\": \"{{directorPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login Teacher",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "if (json && json.token) {",
+                  "  pm.collectionVariables.set('tokenTeacher', json.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{teacherEmail}}\",\n  \"password\": \"{{teacherPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login Responsible",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "var json = pm.response.json();",
+                  "if (json && json.token) {",
+                  "  pm.collectionVariables.set('tokenResponsible', json.token);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{responsibleEmail}}\",\n  \"password\": \"{{responsiblePassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notes",
+      "item": [
+        {
+          "name": "Create Note (Teacher/Director)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenTeacher}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": {{studentId}},\n  \"title\": \"Recado\",\n  \"content\": \"Aluno participou bem da atividade.\",\n  \"type\": \"GENERAL\",\n  \"visibleToResponsible\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/notes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notes"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Note (Teacher/Director)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenTeacher}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"content\": \"Conteudo atualizado.\",\n  \"status\": \"RESOLVED\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/notes/{{noteId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notes",
+                "{{noteId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Note (Teacher/Director)",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenTeacher}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notes/{{noteId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notes",
+                "{{noteId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Notes by Student (Director)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenDirector}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notes/student/{{studentId}}?status=OPEN",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notes",
+                "student",
+                "{{studentId}}"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "OPEN"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Notes by Student (Responsible)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenResponsible}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/notes/student/{{studentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "notes",
+                "student",
+                "{{studentId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Students",
+      "item": [
+        {
+          "name": "My Students (Teacher)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenTeacher}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/students/my/teacher",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "students",
+                "my",
+                "teacher"
+              ]
+            }
+          }
+        },
+        {
+          "name": "My Students (Responsible)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenResponsible}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/students/my/responsible",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "students",
+                "my",
+                "responsible"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Find Student by Id (Director/Teacher/Responsible)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenDirector}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/students/{{studentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "students",
+                "{{studentId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Director",
+      "item": [
+        {
+          "name": "Create Family",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenDirector}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"{{familyFirstName}}\",\n  \"lastName\": \"{{familyLastName}}\",\n  \"email\": \"{{familyEmail}}\",\n  \"password\": \"{{familyPassword}}\",\n  \"children\": [\n    {\n      \"name\": \"{{familyChildName}}\",\n      \"gender\": \"{{familyChildGender}}\",\n      \"birthDate\": \"{{familyChildBirthDate}}\",\n      \"classroomId\": {{familyChildClassroomId}}\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/director/families",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "director",
+                "families"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Teacher",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenDirector}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"{{teacherFirstName}}\",\n  \"lastName\": \"{{teacherLastName}}\",\n  \"email\": \"{{teacherEmailNew}}\",\n  \"password\": \"{{teacherPasswordNew}}\",\n  \"classrooms\": [\n    \"{{teacherClassroomName}}\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/director/teachers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "director",
+                "teachers"
+              ]
+            }
+          }
+        },
+        {
+          "name": "List Teachers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenDirector}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/director/teachers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "director",
+                "teachers"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Teacher",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenDirector}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/director/teachers/{{teacherId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "director",
+                "teachers",
+                "{{teacherId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Link Responsible to Student",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenDirector}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/director/responsibles/{{responsibleId}}/students/{{studentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "director",
+                "responsibles",
+                "{{responsibleId}}",
+                "students",
+                "{{studentId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Unlink Responsible from Student",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{tokenDirector}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/director/responsibles/{{responsibleId}}/students/{{studentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "director",
+                "responsibles",
+                "{{responsibleId}}",
+                "students",
+                "{{studentId}}"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "directorEmail",
+      "value": "director@escola.com"
+    },
+    {
+      "key": "directorPassword",
+      "value": "123456"
+    },
+    {
+      "key": "teacherEmail",
+      "value": "teacher@escola.com"
+    },
+    {
+      "key": "teacherPassword",
+      "value": "123456"
+    },
+    {
+      "key": "responsibleEmail",
+      "value": "responsible@escola.com"
+    },
+    {
+      "key": "responsiblePassword",
+      "value": "123456"
+    },
+    {
+      "key": "familyFirstName",
+      "value": "Paula"
+    },
+    {
+      "key": "familyLastName",
+      "value": "Silva"
+    },
+    {
+      "key": "familyEmail",
+      "value": "familia.paula@escola.com"
+    },
+    {
+      "key": "familyPassword",
+      "value": "123456"
+    },
+    {
+      "key": "familyChildName",
+      "value": "Joao Silva"
+    },
+    {
+      "key": "familyChildGender",
+      "value": "MALE"
+    },
+    {
+      "key": "familyChildBirthDate",
+      "value": "2018-05-10"
+    },
+    {
+      "key": "familyChildClassroomId",
+      "value": "1"
+    },
+    {
+      "key": "teacherFirstName",
+      "value": "Carlos"
+    },
+    {
+      "key": "teacherLastName",
+      "value": "Lima"
+    },
+    {
+      "key": "teacherEmailNew",
+      "value": "carlos.lima.novo@escola.com"
+    },
+    {
+      "key": "teacherPasswordNew",
+      "value": "123456"
+    },
+    {
+      "key": "teacherClassroomName",
+      "value": "Turma A"
+    },
+    {
+      "key": "tokenDirector",
+      "value": ""
+    },
+    {
+      "key": "tokenTeacher",
+      "value": ""
+    },
+    {
+      "key": "tokenResponsible",
+      "value": ""
+    },
+    {
+      "key": "studentId",
+      "value": "1"
+    },
+    {
+      "key": "responsibleId",
+      "value": "1"
+    },
+    {
+      "key": "noteId",
+      "value": "1"
+    },
+    {
+      "key": "teacherId",
+      "value": "1"
+    }
+  ]
+}
