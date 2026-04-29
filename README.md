@@ -33,6 +33,14 @@ Backend da agenda escolar com JWT, regras por perfil e anotações.
 - Vincular/desvincular responsável-aluno:
   - `POST /api/director/responsibles/{responsibleId}/students/{studentId}`
   - `DELETE /api/director/responsibles/{responsibleId}/students/{studentId}`
+- Deletar família (menu já existe na UI):
+  - `GET /api/director/families`
+  - `DELETE /api/director/families/{responsibleId}`
+- Criar, listar  e deletar sala:
+  - `GET api/director/classroomss`
+  - `DELETE api/director/classrooms{classroomsId}`
+  - `POST api/director/classrooms`
+  
 
 ### Professor
 
@@ -44,6 +52,13 @@ Backend da agenda escolar com JWT, regras por perfil e anotações.
   - `GET /api/notes/student/{studentId}`
 - Listar alunos do professor:
   - `GET /api/students/my/teacher`
+
+- Listar salas do professor:
+  - `GET /api/classrooms/my/teacher`
+
+- Listar alunos da sala:
+  - `GET /api/classrooms/{classroomId}/students`
+
 
 ### Responsável
 
@@ -64,19 +79,11 @@ Backend da agenda escolar com JWT, regras por perfil e anotações.
 - Exceções padronizadas:
   - `400`, `401`, `403`, `404`, `409`, `500`.
 
+
+  
+
 ## O que ainda precisa fazer (com base nas telas)
-
-### Diretor
-
-- Deletar família (menu já existe na UI):
-  - `GET /api/director/families`
-  - `DELETE /api/director/families/{responsibleId}`
-
 ### Professor
-
-- Tela “Gerenciar anotações / Selecione a sala”:
-  - falta endpoint dedicado para listar turmas do professor.
-  - opcional: listar alunos por turma.
 - Tela de anotação com “Anexar imagem”:
   - falta suporte de anexo/upload no módulo `notes`.
 
@@ -110,3 +117,7 @@ Com `spring.jpa.hibernate.ddl-auto=validate`, qualquer divergência de schema bl
 ```bash
 ./mvnw spring-boot:run
 ```
+
+ 
+
+

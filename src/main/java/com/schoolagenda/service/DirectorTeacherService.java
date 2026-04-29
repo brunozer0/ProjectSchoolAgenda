@@ -5,6 +5,7 @@ import com.schoolagenda.domain.entity.Role;
 import com.schoolagenda.domain.entity.Teacher;
 import com.schoolagenda.domain.entity.User;
 import com.schoolagenda.domain.enums.RoleName;
+import com.schoolagenda.dto.classroom.ClassroomResponse;
 import com.schoolagenda.dto.director.TeacherListResponse;
 import com.schoolagenda.dto.director.TeacherCreateRequest;
 import com.schoolagenda.dto.director.TeacherCreateResponse;
@@ -22,6 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -35,6 +38,7 @@ public class DirectorTeacherService {
 
     @Transactional
     public TeacherCreateResponse createTeacher(TeacherCreateRequest request) {
+
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new ConflictException("E-mail ja cadastrado.");
         }
@@ -47,39 +51,62 @@ public class DirectorTeacherService {
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(role);
+
         User savedUser = userRepository.save(user);
 
         Teacher teacher = new Teacher();
         teacher.setUser(savedUser);
+
         Teacher savedTeacher = teacherRepository.save(teacher);
 
-        List<Long> classroomIds = new ArrayList<>();
-        for (String classroomName : request.getClassrooms()) {
-            Classroom classroom = new Classroom();
-            classroom.setName(classroomName.trim());
-            classroom.setTeacher(savedTeacher);
-            Classroom savedClassroom = classroomRepository.save(classroom);
-            classroomIds.add(savedClassroom.getId());
+        List<Long> requestedIds = request.getClassroomIds();
+
+        List<Classroom> classrooms = classroomRepository.findAllById(requestedIds);
+
+
+        if (classrooms.size() != requestedIds.size()) {
+
+            Set<Long> foundIds = classrooms.stream()
+                    .map(Classroom::getId)
+                    .collect(Collectors.toSet());
+
+            List<Long> missingIds = requestedIds.stream()
+                    .filter(id -> !foundIds.contains(id))
+                    .toList();
+
+            throw new ResourceNotFoundException(
+                    "Classrooms nao encontradas: " + missingIds
+            );
         }
+
+
+        for (Classroom classroom : classrooms) {
+            classroom.getTeachers().add(savedTeacher);
+        }
+
+        classroomRepository.saveAll(classrooms);
 
         return TeacherCreateResponse.builder()
                 .teacherId(savedTeacher.getId())
                 .userId(savedUser.getId())
                 .name(savedUser.getName())
                 .email(savedUser.getEmail())
-                .classroomIds(classroomIds)
+                .classroomIds(
+                        classrooms.stream().map(Classroom::getId).toList()
+                )
                 .build();
     }
 
     @Transactional(readOnly = true)
     public List<TeacherListResponse> listTeachers() {
-        return teacherRepository.findAllByUserDeletedAtIsNullOrderByUserNameAsc()
+
+        return teacherRepository.findAllWithClassrooms()
                 .stream()
                 .map(teacher -> {
-                    List<String> classroomNames = classroomRepository
-                            .findAllByTeacherIdAndDeletedAtIsNull(teacher.getId())
-                            .stream()
-                            .map(Classroom::getName)
+
+                    List<ClassroomResponse> classrooms = teacher.getClassrooms().stream()
+                            .filter(c -> c.getDeletedAt() == null)
+                            .map(ClassroomResponse::from)
                             .toList();
 
                     return TeacherListResponse.builder()
@@ -87,7 +114,7 @@ public class DirectorTeacherService {
                             .userId(teacher.getUser().getId())
                             .name(teacher.getUser().getName())
                             .email(teacher.getUser().getEmail())
-                            .classrooms(classroomNames)
+                            .classrooms(classrooms)
                             .build();
                 })
                 .toList();
@@ -95,20 +122,22 @@ public class DirectorTeacherService {
 
     @Transactional
     public void deleteTeacher(Long teacherId) {
-        Teacher teacher = teacherRepository.findById(teacherId)
-                .orElseThrow(() -> new ResourceNotFoundException("Professor nao encontrado"));
 
-        User user = userRepository.findByIdAndDeletedAtIsNull(teacher.getId())
+        Teacher teacher = teacherRepository.findActiveById(teacherId)
                 .orElseThrow(() -> new ResourceNotFoundException("Professor nao encontrado"));
 
         LocalDateTime now = LocalDateTime.now();
-        user.setDeletedAt(now);
-        userRepository.save(user);
 
-        List<Classroom> classrooms = classroomRepository.findAllByTeacherIdAndDeletedAtIsNull(teacherId);
+        User user = teacher.getUser();
+        user.setDeletedAt(now);
+
+        List<Classroom> classrooms = classroomRepository
+                .findByTeachers_IdAndDeletedAtIsNull(teacherId);
+
         for (Classroom classroom : classrooms) {
-            classroom.setDeletedAt(now);
+            classroom.getTeachers().remove(teacher);
         }
+
         classroomRepository.saveAll(classrooms);
     }
 }

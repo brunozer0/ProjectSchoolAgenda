@@ -1,11 +1,9 @@
 package com.schoolagenda.controller;
 
-import com.schoolagenda.dto.director.FamilyCreateRequest;
-import com.schoolagenda.dto.director.FamilyCreateResponse;
-import com.schoolagenda.dto.director.TeacherListResponse;
+import com.schoolagenda.dto.classroom.ClassroomResponse;
+import com.schoolagenda.dto.director.*;
+import com.schoolagenda.service.DirectorClassroomService;
 import com.schoolagenda.service.DirectorFamilyService;
-import com.schoolagenda.dto.director.TeacherCreateRequest;
-import com.schoolagenda.dto.director.TeacherCreateResponse;
 import com.schoolagenda.service.DirectorTeacherService;
 import com.schoolagenda.service.ResponsibleStudentService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -36,6 +34,16 @@ public class DirectorController {
     private final ResponsibleStudentService responsibleStudentService;
     private final DirectorFamilyService directorFamilyService;
     private final DirectorTeacherService directorTeacherService;
+    private final DirectorClassroomService directorClassroomService;
+
+
+
+//    public
+    @GetMapping("/families")
+    @Operation(summary = "Listar familias", description = "Lista familias, com seus respectivos responsaveis e filhos.")
+    public ResponseEntity<List<FamilyListResponse>> listFamilies () {
+        return ResponseEntity.ok().body(directorFamilyService.getFamilies());
+    }
 
     @PostMapping("/families")
     @Operation(summary = "Cadastrar familia", description = "Cria responsavel, cria alunos e realiza vinculos automaticamente.")
@@ -43,10 +51,43 @@ public class DirectorController {
         return ResponseEntity.status(HttpStatus.CREATED).body(directorFamilyService.createFamily(request));
     }
 
+    @DeleteMapping("/families/{responsibleId}")
+    @Operation(
+            summary = "Deletar familia",
+            description = "Realiza soft delete do usuário e alunos e remove vínculos do responsável."
+    )
+    public ResponseEntity<Void> deleteFamily(@PathVariable long responsibleId) {
+        directorFamilyService.deleteFamily(responsibleId);
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping("/teachers")
     @Operation(summary = "Cadastrar professor", description = "Cria professor e turmas vinculadas.")
     public ResponseEntity<TeacherCreateResponse> createTeacher(@Valid @RequestBody TeacherCreateRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(directorTeacherService.createTeacher(request));
+    }
+
+    @PostMapping("/classrooms")
+    @Operation(summary = "Cadastrar sala", description = "Cria uma sala de aula.")
+    public ResponseEntity<ClassroomResponse> createClassroom(
+            @Valid @RequestBody ClassroomCreateRequest request
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(directorClassroomService.createClassroom(request));
+    }
+
+    @GetMapping("/classrooms")
+    @Operation(summary = "Listar salas", description = "Lista todas as salas ativas.")
+    public ResponseEntity<List<ClassroomResponse>> listClassrooms() {
+        return ResponseEntity.ok(directorClassroomService.listClassrooms());
+    }
+
+    @DeleteMapping("/classrooms/{id}")
+    @Operation(summary = "Deletar sala", description = "Remove logicamente a sala (soft delete).")
+    public ResponseEntity<Void> deleteClassroom(@PathVariable Long id) {
+        directorClassroomService.deleteClassroom(id);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/teachers")

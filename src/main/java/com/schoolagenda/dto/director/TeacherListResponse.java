@@ -1,5 +1,6 @@
 package com.schoolagenda.dto.director;
 
+import com.schoolagenda.dto.classroom.ClassroomResponse;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -12,5 +13,5 @@ public class TeacherListResponse {
     private Long userId;
     private String name;
     private String email;
-    private List<String> classrooms;
+    private List<ClassroomResponse> classrooms;
 }

@@ -23,7 +23,7 @@ public class Teacher {
     private User user;
 
     @JsonIgnore
-    @OneToMany(mappedBy = "teacher", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @ManyToMany(mappedBy = "teachers", fetch = FetchType.LAZY)
     private List<Classroom> classrooms = new ArrayList<>();
 
     public boolean hasClassrooms() {

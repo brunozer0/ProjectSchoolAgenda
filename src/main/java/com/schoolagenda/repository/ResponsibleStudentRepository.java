@@ -9,7 +9,11 @@ public interface ResponsibleStudentRepository extends JpaRepository<ResponsibleS
 
     boolean existsByResponsibleIdAndStudentId(Long responsibleId, Long studentId);
 
+
+
     void deleteByResponsibleIdAndStudentId(Long responsibleId, Long studentId);
+
+    void deleteByResponsibleId(long resposibleId);
 
     List<ResponsibleStudent> findByResponsibleId(Long responsibleId);
 

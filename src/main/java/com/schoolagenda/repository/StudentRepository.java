@@ -11,7 +11,9 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
 
     @Query("""
         SELECT s FROM Student s
-        WHERE s.classroom.teacher.id = :teacherId
+        JOIN s.classroom c
+        JOIN c.teachers t
+        WHERE t.id = :teacherId
         AND s.deletedAt IS NULL
     """)
     List<Student> findAllByTeacherId(@Param("teacherId") Long teacherId);
@@ -24,5 +26,15 @@ public interface StudentRepository extends JpaRepository<Student, Long> {
     """)
     List<Student> findAllByResponsibleId(@Param("responsibleId") Long responsibleId);
 
-    boolean existsByIdAndClassroomTeacherIdAndDeletedAtIsNull(Long studentId, Long teacherId);
+    List<Student> findAllByClassroomIdAndDeletedAtIsNull(Long classroomId);
+
+    @Query("""
+        SELECT COUNT(s) > 0 FROM Student s
+        JOIN s.classroom c
+        JOIN c.teachers t
+        WHERE s.id = :studentId
+        AND t.id = :teacherId
+        AND s.deletedAt IS NULL
+    """)
+    boolean existsByStudentAndTeacher(Long studentId, Long teacherId);
 }
