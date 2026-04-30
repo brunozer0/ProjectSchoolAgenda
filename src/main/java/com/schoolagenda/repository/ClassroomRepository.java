@@ -11,6 +11,8 @@ public interface ClassroomRepository extends JpaRepository<Classroom, Long> {
 
     List<Classroom> findAllByDeletedAtIsNull();
 
+    List<Classroom> findAllByIdInAndDeletedAtIsNull(List<Long> ids);
+
     Optional<Classroom> findByIdAndDeletedAtIsNull(Long id);
 
     List<Classroom> findByTeachers_IdAndDeletedAtIsNull(Long teacherId);

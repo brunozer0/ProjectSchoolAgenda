@@ -61,7 +61,8 @@ public class DirectorTeacherService {
 
         List<Long> requestedIds = request.getClassroomIds();
 
-        List<Classroom> classrooms = classroomRepository.findAllById(requestedIds);
+        List<Classroom> classrooms =
+                classroomRepository.findAllByIdInAndDeletedAtIsNull(requestedIds);
 
 
         if (classrooms.size() != requestedIds.size()) {
