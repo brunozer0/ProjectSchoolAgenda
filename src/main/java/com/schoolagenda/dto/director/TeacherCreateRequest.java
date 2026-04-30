@@ -27,6 +27,5 @@ public class TeacherCreateRequest {
     @Size(min = 6, max = 255)
     private String password;
 
-    @NotEmpty
-    private List<@NotBlank String> classrooms;
+    private List<Long> classroomIds;
 }

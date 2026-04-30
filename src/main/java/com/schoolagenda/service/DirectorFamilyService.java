@@ -10,6 +10,7 @@ import com.schoolagenda.domain.enums.RoleName;
 import com.schoolagenda.dto.director.FamilyChildRequest;
 import com.schoolagenda.dto.director.FamilyCreateRequest;
 import com.schoolagenda.dto.director.FamilyCreateResponse;
+import com.schoolagenda.dto.director.FamilyListResponse;
 import com.schoolagenda.exception.ConflictException;
 import com.schoolagenda.exception.ResourceNotFoundException;
 import com.schoolagenda.repository.ClassroomRepository;
@@ -23,6 +24,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -84,5 +86,39 @@ public class DirectorFamilyService {
                 .email(savedUser.getEmail())
                 .studentIds(createdStudentIds)
                 .build();
+    }
+
+
+    public List<FamilyListResponse> getFamilies() {
+        return responsibleRepository.findAllWithStudents()
+                .stream()
+                .map(FamilyListResponse::from)
+                .toList();
+    }
+
+
+    /* revisar esse delete em relação a auditar */
+    @Transactional
+    public void deleteFamily(long responsibleId) {
+
+        Responsible responsible = responsibleRepository.findById(responsibleId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Responsável não encontrado | responsibleId=" + responsibleId
+                ));
+
+        LocalDateTime now = LocalDateTime.now();
+
+        responsible.getUser().setDeletedAt(now);
+
+        List<ResponsibleStudent> links = responsibleStudentRepository.findByResponsibleId(responsibleId);
+
+        List<Student> students = links.stream()
+                .map(ResponsibleStudent::getStudent)
+                .toList();
+
+        students.forEach(s -> s.setDeletedAt(now));
+
+        responsibleStudentRepository.deleteByResponsibleId(responsibleId);
+        responsibleRepository.deleteById(responsibleId);
     }
 }

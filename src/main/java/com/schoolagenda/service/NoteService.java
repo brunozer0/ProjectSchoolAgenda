@@ -141,7 +141,8 @@ public class NoteService {
         Teacher teacher = teacherRepository.findByUserId(teacherUserId)
                 .orElseThrow(() -> new ResourceNotFoundException("Professor nao encontrado"));
 
-        if (!studentRepository.existsByIdAndClassroomTeacherIdAndDeletedAtIsNull(studentId, teacher.getId())) {
+        if (!studentRepository.existsByStudentAndTeacher(
+                studentId, teacher.getId())) {
             throw new ForbiddenException("O aluno nao pertence a sua turma.");
         }
     }

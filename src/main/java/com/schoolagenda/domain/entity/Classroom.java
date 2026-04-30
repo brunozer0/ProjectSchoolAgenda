@@ -11,12 +11,8 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 @Entity
-@Table(
-        name = "classrooms",
-        indexes = {
-                @Index(name = "idx_classroom_teacher", columnList = "teacher_id")
-        }
-)
+@Table(name = "classrooms")
+
 @Getter @Setter @NoArgsConstructor
 public class Classroom {
 
@@ -27,9 +23,14 @@ public class Classroom {
     @Column(nullable = false, length = 100)
     private String name;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "teacher_id", nullable = false)
-    private Teacher teacher;
+    @JsonIgnore
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "classroom_teachers",
+            joinColumns = @JoinColumn(name = "classroom_id"),
+            inverseJoinColumns = @JoinColumn(name = "teacher_id")
+    )
+    private List<Teacher> teachers = new ArrayList<>();
 
     @JsonIgnore
     @OneToMany(mappedBy = "classroom", fetch = FetchType.LAZY)
