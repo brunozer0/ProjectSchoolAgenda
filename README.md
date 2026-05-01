@@ -109,9 +109,10 @@ Com `spring.jpa.hibernate.ddl-auto=validate`, qualquer divergência de schema bl
 ## Como rodar
 
 1. Definir variáveis:
-   - `DB_USER`
-   - `DB_PASSWORD`
-   - `JWT_SECRET` (Base64)
+   - `DB_URL` → URL de conexão com o banco de dados MySQL
+   - `DB_USER` → usuário do banco de dados
+   - `DB_PASSWORD` → senha do banco de dados
+   - `JWT_SECRET` → chave secreta para assinatura dos tokens JWT (Base64)
 2. Subir:
 
 ```bash
