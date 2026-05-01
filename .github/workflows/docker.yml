@@ -37,3 +37,8 @@ jobs:
       - name: Push Docker image (sha)
         run: |
           docker push ghcr.io/brunozer0/projectschoolagenda:${{ github.sha }}
+
+      - name: Trigger Portainer webhook
+        run: curl -X POST $PORTAINER_WEBHOOK_URL
+        env:
+          PORTAINER_WEBHOOK_URL: ${{ secrets.PORTAINER_WEBHOOK_URL }}
