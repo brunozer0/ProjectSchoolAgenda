@@ -25,8 +25,15 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build -t ghcr.io/brunozer0/projectschoolagenda:latest .
+          docker build \
+            -t ghcr.io/brunozer0/projectschoolagenda:latest \
+            -t ghcr.io/brunozer0/projectschoolagenda:${{ github.sha }} \
+            .
 
-      - name: Push Docker image
+      - name: Push Docker image (latest)
         run: |
           docker push ghcr.io/brunozer0/projectschoolagenda:latest
+
+      - name: Push Docker image (sha)
+        run: |
+          docker push ghcr.io/brunozer0/projectschoolagenda:${{ github.sha }}
