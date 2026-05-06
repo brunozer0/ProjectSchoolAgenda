@@ -9,6 +9,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import com.schoolagenda.domain.enums.NoteType;
 import com.schoolagenda.domain.enums.NoteStatus;
@@ -34,6 +35,10 @@ public class Note {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "author_id", nullable = false)
     private User author;
+
+
+    @OneToMany(mappedBy = "note", fetch = FetchType.LAZY)
+    private List<Image> images;
 
     @Column(length = 200)
     private String title;
