@@ -26,6 +26,17 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(404, "Nao encontrado", ex.getMessage(), LocalDateTime.now()));
     }
 
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<ErrorResponse> handleBadRequest(BadRequestException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(
+                        400,
+                        "Requisicao invalida",
+                        ex.getMessage(),
+                        LocalDateTime.now()
+                ));
+    }
+
     @ExceptionHandler(ConflictException.class)
     public ResponseEntity<ErrorResponse> handleConflict(ConflictException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)

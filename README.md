@@ -70,6 +70,11 @@ Backend da agenda escolar com JWT, regras por perfil e anotações.
   - `GET /api/notes/student/{studentId}`
   - somente `is_visible_to_responsible = true`.
 
+
+### Notes
+- Suporte a upload  de imagem:
+- Retorno da role do autor da nota.
+
 ### Regras de negócio já aplicadas
 
 - Professor só acessa aluno da própria turma.
@@ -80,21 +85,14 @@ Backend da agenda escolar com JWT, regras por perfil e anotações.
   - `400`, `401`, `403`, `404`, `409`, `500`.
 
 
-  
-
 ## O que ainda precisa fazer (com base nas telas)
-### Professor
-- Tela de anotação com “Anexar imagem”:
-  - falta suporte de anexo/upload no módulo `notes`.
 
 ### Responsável
-
-- Tela “Enviar anotação”:
-  - hoje não existe fluxo de escrita de anotação por responsável.
 - Tela “Marcar como lida”:
   - falta controle de leitura para `notes`.
-- Se mantiver “Anexar imagem” nessa visão:
-  - falta suporte de anexo/upload no módulo `notes`.
+- Bug do id fanstama em note, revisar deleted_at
+- Notes Globais(possivel feature)
+
 
 ## Banco de dados
 

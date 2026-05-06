@@ -1,5 +1,6 @@
 package com.schoolagenda.controller;
 import com.schoolagenda.domain.enums.NoteStatus;
+import com.schoolagenda.dto.note.NoteMultipartRequest;
 import com.schoolagenda.dto.note.NoteRequest;
 import com.schoolagenda.dto.note.NoteResponse;
 import com.schoolagenda.dto.note.NoteUpdateRequest;
@@ -14,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -26,18 +28,28 @@ public class NoteController {
 
     private final NoteService noteService;
 
-    @PostMapping
-    @PreAuthorize("hasAnyRole('DIRECTOR', 'TEACHER')")
-    @Operation(summary = "Criar anotacao", description = "Permite criacao de anotacao por DIRECTOR ou TEACHER.")
+    @PostMapping(consumes = "multipart/form-data")
+    @Operation(
+            summary = "Criar anotacao",
+            description = "Cria uma anotacao com possibilidade de upload de imagens"
+    )
     public ResponseEntity<NoteResponse> create(
-            @Valid @RequestBody NoteRequest request,
+            @ModelAttribute @Valid NoteMultipartRequest form,
             Authentication auth) {
+
+        NoteRequest request = new NoteRequest();
+        request.setStudentId(form.getStudentId());
+        request.setTitle(form.getTitle());
+        request.setContent(form.getContent());
+        request.setType(form.getType());
+        request.setVisibleToResponsible(form.isVisibleToResponsible());
+
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(noteService.create(request, auth.getName()));
+                .body(noteService.create(request, form.getImages(), auth.getName()));
     }
 
+
     @PatchMapping("/{id}")
-    @PreAuthorize("hasAnyRole('DIRECTOR', 'TEACHER')")
     @Operation(summary = "Atualizar anotacao", description = "Atualiza campos parciais de uma anotacao.")
     public ResponseEntity<NoteResponse> update(
             @PathVariable Long id,
