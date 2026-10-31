@@ -124,7 +124,7 @@ class StudentServiceTest {
         when(userRepository.findByEmailAndDeletedAtIsNull(teacherUser.getEmail())).thenReturn(Optional.of(teacherUser));
         when(studentRepository.findById(activeStudent.getId())).thenReturn(Optional.of(activeStudent));
         when(teacherRepository.findByUserId(teacherUser.getId())).thenReturn(Optional.of(teacher));
-        when(studentRepository.existsByIdAndClassroomTeacherIdAndDeletedAtIsNull(activeStudent.getId(), teacher.getId()))
+        when(studentRepository.existsByStudentAndTeacher(activeStudent.getId(), teacher.getId()))
                 .thenReturn(true);
 
         StudentResponse result = studentService.findById(activeStudent.getId(), teacherUser.getEmail());
@@ -140,7 +140,7 @@ class StudentServiceTest {
         when(userRepository.findByEmailAndDeletedAtIsNull(teacherUser.getEmail())).thenReturn(Optional.of(teacherUser));
         when(studentRepository.findById(activeStudent.getId())).thenReturn(Optional.of(activeStudent));
         when(teacherRepository.findByUserId(teacherUser.getId())).thenReturn(Optional.of(teacher));
-        when(studentRepository.existsByIdAndClassroomTeacherIdAndDeletedAtIsNull(activeStudent.getId(), teacher.getId()))
+        when(studentRepository.existsByStudentAndTeacher(activeStudent.getId(), teacher.getId()))
                 .thenReturn(false);
 
         assertThrows(ForbiddenException.class,

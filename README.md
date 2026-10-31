@@ -120,3 +120,13 @@ Com `spring.jpa.hibernate.ddl-auto=validate`, qualquer divergência de schema bl
  
 
 
+
+## Testes das regras de negócio
+
+Execute o projeto de testes independente com Java 17 ou superior:
+
+```bash
+./mvnw -f business-tests/pom.xml clean test
+```
+
+Consulte [a documentação dos testes](business-tests/README.md) para cenários cobertos, execução por serviço e limites da suíte.

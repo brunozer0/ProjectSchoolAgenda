@@ -81,7 +81,7 @@ class NoteServiceTest {
         when(userRepository.findByEmailAndDeletedAtIsNull(teacherUser.getEmail())).thenReturn(Optional.of(teacherUser));
         when(studentRepository.findById(activeStudent.getId())).thenReturn(Optional.of(activeStudent));
         when(teacherRepository.findByUserId(teacherUser.getId())).thenReturn(Optional.of(teacher));
-        when(studentRepository.existsByIdAndClassroomTeacherIdAndDeletedAtIsNull(activeStudent.getId(), teacher.getId()))
+        when(studentRepository.existsByStudentAndTeacher(activeStudent.getId(), teacher.getId()))
                 .thenReturn(false);
 
         assertThrows(ForbiddenException.class,
@@ -102,10 +102,10 @@ class NoteServiceTest {
         when(userRepository.findByEmailAndDeletedAtIsNull(teacherUser.getEmail())).thenReturn(Optional.of(teacherUser));
         when(studentRepository.findById(activeStudent.getId())).thenReturn(Optional.of(activeStudent));
         when(teacherRepository.findByUserId(teacherUser.getId())).thenReturn(Optional.of(teacher));
-        when(studentRepository.existsByIdAndClassroomTeacherIdAndDeletedAtIsNull(activeStudent.getId(), teacher.getId()))
+        when(studentRepository.existsByStudentAndTeacher(activeStudent.getId(), teacher.getId()))
                 .thenReturn(false);
 
-        assertThrows(ForbiddenException.class, () -> noteService.create(request, teacherUser.getEmail()));
+        assertThrows(ForbiddenException.class, () -> noteService.create(request, List.of(), teacherUser.getEmail()));
     }
 
     @Test
@@ -155,14 +155,14 @@ class NoteServiceTest {
         when(responsibleRepository.findByUserId(responsibleUser.getId())).thenReturn(Optional.of(responsible));
         when(responsibleStudentRepository.existsByResponsibleIdAndStudentId(responsible.getId(), activeStudent.getId()))
                 .thenReturn(true);
-        when(noteRepository.findVisibleByStudentId(activeStudent.getId(), NoteStatus.OPEN)).thenReturn(List.of(visibleNote));
+        when(noteRepository.findVisibleByStudentIdWithImages(activeStudent.getId(), NoteStatus.OPEN)).thenReturn(List.of(visibleNote));
 
         List<NoteResponse> result = noteService.listByStudent(activeStudent.getId(), NoteStatus.OPEN, responsibleUser.getEmail());
 
         assertEquals(1, result.size());
         assertEquals(visibleNote.getId(), result.get(0).getId());
-        verify(noteRepository).findVisibleByStudentId(activeStudent.getId(), NoteStatus.OPEN);
-        verify(noteRepository, never()).findByStudentId(activeStudent.getId(), NoteStatus.OPEN);
+        verify(noteRepository).findVisibleByStudentIdWithImages(activeStudent.getId(), NoteStatus.OPEN);
+        verify(noteRepository, never()).findByStudentIdWithImages(activeStudent.getId(), NoteStatus.OPEN);
     }
 
     @Test
@@ -171,13 +171,13 @@ class NoteServiceTest {
 
         when(userRepository.findByEmailAndDeletedAtIsNull(directorUser.getEmail())).thenReturn(Optional.of(directorUser));
         when(studentRepository.findById(activeStudent.getId())).thenReturn(Optional.of(activeStudent));
-        when(noteRepository.findByStudentId(activeStudent.getId(), null)).thenReturn(List.of(note));
+        when(noteRepository.findByStudentIdWithImages(activeStudent.getId(), null)).thenReturn(List.of(note));
 
         List<NoteResponse> result = noteService.listByStudent(activeStudent.getId(), null, directorUser.getEmail());
 
         assertEquals(1, result.size());
         assertEquals(note.getId(), result.get(0).getId());
-        verify(noteRepository).findByStudentId(activeStudent.getId(), null);
+        verify(noteRepository).findByStudentIdWithImages(activeStudent.getId(), null);
         verify(teacherRepository, never()).findByUserId(directorUser.getId());
         verify(responsibleRepository, never()).findByUserId(directorUser.getId());
     }
@@ -209,6 +209,44 @@ class NoteServiceTest {
 
         assertNotNull(noteFromAnotherTeacher.getDeletedAt());
         verify(noteRepository).save(noteFromAnotherTeacher);
+    }
+
+    @Test
+    void responsibleCannotDeleteEvenVisibleNote() {
+        when(userRepository.findByEmailAndDeletedAtIsNull(responsibleUser.getEmail()))
+                .thenReturn(Optional.of(responsibleUser));
+        when(noteRepository.findById(900L)).thenReturn(Optional.of(noteFromAnotherTeacher));
+        assertThrows(ForbiddenException.class, () -> noteService.delete(900L, responsibleUser.getEmail()));
+        verify(noteRepository, never()).save(org.mockito.ArgumentMatchers.any());
+        org.junit.jupiter.api.Assertions.assertNull(noteFromAnotherTeacher.getDeletedAt());
+    }
+
+    @Test
+    void invalidAttachmentDoesNotSaveNote() {
+        when(userRepository.findByEmailAndDeletedAtIsNull(directorUser.getEmail()))
+                .thenReturn(Optional.of(directorUser));
+        when(studentRepository.findById(activeStudent.getId())).thenReturn(Optional.of(activeStudent));
+        NoteRequest request = new NoteRequest();
+        request.setStudentId(activeStudent.getId());
+        var file = new org.springframework.mock.web.MockMultipartFile(
+                "file", "arquivo.txt", "text/plain", new byte[]{1});
+        assertThrows(com.schoolagenda.exception.BadRequestException.class,
+                () -> noteService.create(request, List.of(file), directorUser.getEmail()));
+        verify(noteRepository, never()).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    void moreThanFiveAttachmentsDoesNotSaveNote() {
+        when(userRepository.findByEmailAndDeletedAtIsNull(directorUser.getEmail()))
+                .thenReturn(Optional.of(directorUser));
+        when(studentRepository.findById(activeStudent.getId())).thenReturn(Optional.of(activeStudent));
+        NoteRequest request = new NoteRequest();
+        request.setStudentId(activeStudent.getId());
+        var file = new org.springframework.mock.web.MockMultipartFile(
+                "file", "imagem.png", "image/png", new byte[]{1});
+        assertThrows(com.schoolagenda.exception.BadRequestException.class,
+                () -> noteService.create(request, java.util.Collections.nCopies(6, file), directorUser.getEmail()));
+        verify(noteRepository, never()).save(org.mockito.ArgumentMatchers.any());
     }
 
     private static User buildUser(Long id, String email, RoleName roleName) {
