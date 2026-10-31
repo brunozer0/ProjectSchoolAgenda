@@ -27,7 +27,7 @@ Backend da agenda escolar com JWT, regras por perfil e anotações.
   - cria `user` professor + `teacher` + turmas.
 - Deletar professor:
   - `DELETE /api/director/teachers/{teacherId}`
-  - soft delete do professor e das turmas.
+  - exclusão lógica do usuário do professor e remoção dos vínculos com as turmas, preservando as turmas.
 - Listar professores (para tela de deletar):
   - `GET /api/director/teachers`
 - Vincular/desvincular responsável-aluno:
@@ -78,7 +78,10 @@ Backend da agenda escolar com JWT, regras por perfil e anotações.
 ### Regras de negócio já aplicadas
 
 - Professor só acessa aluno da própria turma.
-- Professor só edita/deleta a própria anotação.
+- Professor edita o conteúdo da própria anotação e exclui somente as próprias, enquanto tiver acesso ao aluno.
+- Professor da turma pode alterar o status de bilhetes recebidos sem alterar seu conteúdo.
+- Responsável pode alterar o status de bilhetes visíveis do aluno vinculado e editar apenas conteúdo de sua autoria.
+- Diretor pode editar conteúdo e status; bilhetes e alunos excluídos ficam indisponíveis para todos os perfis.
 - Responsável só acessa aluno vinculado.
 - Diretor com acesso administrativo total no escopo implementado.
 - Exceções padronizadas:
@@ -88,10 +91,27 @@ Backend da agenda escolar com JWT, regras por perfil e anotações.
 ## O que ainda precisa fazer (com base nas telas)
 
 ### Responsável
-- Tela “Marcar como lida”:
-  - falta controle de leitura para `notes`.
-- Bug do id fanstama em note, revisar deleted_at
-- Notes Globais(possivel feature)
+- Integrar a interface ao controle de leitura opcional já disponível na API.
+- Notes globais (possível funcionalidade futura).
+
+### Correções dos bilhetes
+
+- Consulta individual: `GET /api/notes/{id}`, com as mesmas permissões da listagem.
+- O `PATCH /api/notes/{id}` continua aceitando os campos existentes. Alterar apenas `status` é permitido a quem tem acesso ao bilhete; título, conteúdo, tipo e visibilidade exigem autoria ou direção. Uma requisição mista não autorizada é rejeitada por inteiro.
+- Bilhetes excluídos ou de alunos excluídos retornam `404` nas operações por ID, evitando operações sobre registros ausentes das listagens.
+- Criação com anexos é transacional: falhas desfazem as gravações no banco e tentam remover os arquivos enviados. Falhas na limpeza são registradas no log para recuperação operacional. O banco e o armazenamento externo não compartilham uma transação distribuída.
+- Exclusão só remove arquivos externos após o commit do banco.
+
+### Controle de leitura opcional e compatível com a tela atual
+
+Nenhuma consulta marca um bilhete como lido. Os retornos existentes de listagem, criação e edição permanecem com o mesmo formato. `OPEN`/`RESOLVED` continuam sendo status de atendimento, independentes da leitura.
+
+- `PUT /api/notes/{id}/read`: registra a primeira leitura do usuário autenticado. Repetições preservam a data original.
+- `GET /api/notes/{id}/read`: consulta somente a leitura do usuário autenticado, sem gravar.
+- Ambos retornam `{ "noteId": 123, "read": true, "readAt": "2026-10-30T12:00:00" }`. Antes da leitura, `read` é `false` e `readAt` é `null`.
+- Acesso exige aluno ativo e vínculo com a turma (professor) ou vínculo familiar e bilhete visível (responsável); direção tem acesso administrativo.
+- A tabela `note_reads` é criada automaticamente pelo script idempotente `src/main/resources/db/note-reads.sql` na inicialização. O usuário do banco precisa de permissão para criar essa tabela. Nenhuma tabela existente é alterada e não há preenchimento retroativo de leituras.
+- Professores desvinculados da turma não mantêm acesso ao histórico, mesmo sendo autores; essa regra continua baseada no vínculo atual.
 
 
 ## Banco de dados

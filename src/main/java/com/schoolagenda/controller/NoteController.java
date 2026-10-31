@@ -2,6 +2,7 @@ package com.schoolagenda.controller;
 import com.schoolagenda.domain.enums.NoteStatus;
 import com.schoolagenda.dto.note.NoteMultipartRequest;
 import com.schoolagenda.dto.note.NoteRequest;
+import com.schoolagenda.dto.note.NoteReadResponse;
 import com.schoolagenda.dto.note.NoteResponse;
 import com.schoolagenda.dto.note.NoteUpdateRequest;
 import com.schoolagenda.service.NoteService;
@@ -66,6 +67,27 @@ public class NoteController {
             Authentication auth) {
         noteService.delete(id, auth.getName());
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'TEACHER', 'RESPONSIBLE')")
+    @Operation(summary = "Consultar anotacao", description = "Consulta sem marcar como lida.")
+    public ResponseEntity<NoteResponse> findById(@PathVariable Long id, Authentication auth) {
+        return ResponseEntity.ok(noteService.findById(id, auth.getName()));
+    }
+
+    @PutMapping("/{id}/read")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'TEACHER', 'RESPONSIBLE')")
+    @Operation(summary = "Marcar anotacao como lida", description = "Registra a primeira leitura do usuario autenticado de forma idempotente.")
+    public ResponseEntity<NoteReadResponse> markAsRead(@PathVariable Long id, Authentication auth) {
+        return ResponseEntity.ok(noteService.markAsRead(id, auth.getName()));
+    }
+
+    @GetMapping("/{id}/read")
+    @PreAuthorize("hasAnyRole('DIRECTOR', 'TEACHER', 'RESPONSIBLE')")
+    @Operation(summary = "Consultar minha leitura", description = "Consulta a leitura sem modifica-la.")
+    public ResponseEntity<NoteReadResponse> getReadStatus(@PathVariable Long id, Authentication auth) {
+        return ResponseEntity.ok(noteService.getReadStatus(id, auth.getName()));
     }
 
     @GetMapping("/student/{studentId}")

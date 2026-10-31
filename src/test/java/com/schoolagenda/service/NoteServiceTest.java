@@ -116,6 +116,11 @@ class NoteServiceTest {
         when(userRepository.findByEmailAndDeletedAtIsNull(teacherUser.getEmail())).thenReturn(Optional.of(teacherUser));
         when(noteRepository.findById(noteFromAnotherTeacher.getId())).thenReturn(Optional.of(noteFromAnotherTeacher));
 
+        Teacher teacher = new Teacher();
+        teacher.setId(teacherUser.getId());
+        when(teacherRepository.findByUserId(teacherUser.getId())).thenReturn(Optional.of(teacher));
+        when(studentRepository.existsByStudentAndTeacher(activeStudent.getId(), teacher.getId())).thenReturn(true);
+
         assertThrows(ForbiddenException.class,
                 () -> noteService.update(noteFromAnotherTeacher.getId(), request, teacherUser.getEmail()));
     }

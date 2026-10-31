@@ -4,6 +4,7 @@ import com.schoolagenda.domain.entity.*;
 import com.schoolagenda.domain.enums.NoteStatus;
 import com.schoolagenda.domain.enums.RoleName;
 import com.schoolagenda.dto.note.NoteRequest;
+import com.schoolagenda.dto.note.NoteReadResponse;
 import com.schoolagenda.dto.note.NoteResponse;
 import com.schoolagenda.dto.note.NoteUpdateRequest;
 import com.schoolagenda.exception.BadRequestException;
@@ -12,15 +13,22 @@ import com.schoolagenda.exception.ResourceNotFoundException;
 import com.schoolagenda.infrastructure.storage.StorageService;
 import com.schoolagenda.repository.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
 @Service
+@Slf4j
+@Transactional
 @RequiredArgsConstructor
 public class NoteService {
 
@@ -32,6 +40,7 @@ public class NoteService {
     private final UserRepository userRepository;
     private final StorageService storageService;
     private final ImageRepository imageRepository;
+    private final NoteReadRepository noteReadRepository;
 
     @Value("${gcp.storage.bucket}")
     private String bucketName;
@@ -63,13 +72,30 @@ public class NoteService {
         note.setType(request.getType());
         note.setVisibleToResponsible(request.isVisibleToResponsible());
 
-        note = noteRepository.save(note);
-
-        if (files != null && !files.isEmpty()) {
-            processFiles(note, files);
+        List<String> uploadedKeys = new ArrayList<>();
+        boolean synchronizedTransaction = TransactionSynchronizationManager.isSynchronizationActive();
+        if (synchronizedTransaction) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCompletion(int status) {
+                    if (status == STATUS_ROLLED_BACK) cleanupUploads(uploadedKeys);
+                    else if (status == STATUS_UNKNOWN && !uploadedKeys.isEmpty()) {
+                        log.error("Resultado da transacao desconhecido; verificar arquivos {}", uploadedKeys);
+                    }
+                }
+            });
         }
-
-        return NoteResponse.from(note, bucketName);
+        try {
+            note = noteRepository.save(note);
+            note.setImages(new ArrayList<>());
+            if (files != null && !files.isEmpty()) {
+                processFiles(note, files, uploadedKeys);
+            }
+            return NoteResponse.from(note, bucketName);
+        } catch (RuntimeException exception) {
+            if (!synchronizedTransaction) cleanupUploads(uploadedKeys);
+            throw exception;
+        }
     }
     public NoteResponse update(Long noteId, NoteUpdateRequest request, String authorEmail) {
         User author = getActiveUser(authorEmail);
@@ -77,12 +103,12 @@ public class NoteService {
 
         RoleName role = author.getRole().getName();
 
-        if (role == RoleName.TEACHER) {
-            assertTeacherOwnsNote(author.getId(), note);
-        }
-
-        if (role == RoleName.RESPONSIBLE) {
-            assertResponsibleOwnsStudent(author.getId(), note.getStudent().getId());
+        assertCanAccessNote(author, note);
+        boolean editsContent = request.getTitle() != null || request.getContent() != null
+                || request.getType() != null || request.getVisibleToResponsible() != null;
+        if (role != RoleName.DIRECTOR && editsContent
+                && !note.getAuthor().getId().equals(author.getId())) {
+            throw new ForbiddenException("Somente o autor ou a direcao podem editar o conteudo da anotacao.");
         }
 
         if (request.getTitle() != null) {
@@ -118,18 +144,26 @@ public class NoteService {
             throw new ForbiddenException("Professores so podem excluir as proprias anotacoes.");
         }
 
+        assertCanAccessNote(author, note);
+        List<String> keys = note.getImages() == null ? List.of()
+                : note.getImages().stream().map(Image::getStorageKey).toList();
         if (note.getImages() != null && !note.getImages().isEmpty()) {
-            for (Image image : note.getImages()) {
-                storageService.delete(image.getStorageKey());
-            }
-
             imageRepository.deleteAll(note.getImages());
+        }
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() { cleanupUploads(keys); }
+            });
+        } else {
+            cleanupUploads(keys);
         }
 
         note.setDeletedAt(LocalDateTime.now());
         noteRepository.save(note);
     }
 
+    @Transactional(readOnly = true)
     public List<NoteResponse> listByStudent(Long studentId, NoteStatus status, String requesterEmail) {
         User requester = getActiveUser(requesterEmail);
         RoleName role = requester.getRole().getName();
@@ -190,7 +224,7 @@ public class NoteService {
         }
     }
 
-    private void processFiles(Note note, List<MultipartFile> files) {
+    private void processFiles(Note note, List<MultipartFile> files, List<String> uploadedKeys) {
         for (MultipartFile file : files) {
             try {
                 String originalName = file.getOriginalFilename();
@@ -203,11 +237,11 @@ public class NoteService {
 
                 String key = UUID.randomUUID() + extension;
 
-                String storageKey = storageService.upload(
-                        key,
-                        file.getInputStream(),
-                        file.getContentType()
-                );
+                String storageKey;
+                try (var content = file.getInputStream()) {
+                    storageKey = storageService.upload(key, content, file.getContentType());
+                    uploadedKeys.add(storageKey);
+                }
 
                 Image image = new Image();
                 image.setNote(note);
@@ -216,7 +250,7 @@ public class NoteService {
                 image.setContentType(file.getContentType());
                 image.setSize(file.getSize());
 
-                imageRepository.save(image);
+                note.getImages().add(imageRepository.save(image));
 
             } catch (Exception e) {
                 throw new RuntimeException("Erro ao fazer upload do arquivo", e);
@@ -244,11 +278,53 @@ public class NoteService {
         }
     }
 
-    private void assertTeacherOwnsNote(Long teacherUserId, Note note) {
-
-        if (!note.getAuthor().getId().equals(teacherUserId)) {
-            throw new ForbiddenException("Professores so podem editar as proprias anotacoes.");
+    private void cleanupUploads(List<String> keys) {
+        for (String key : keys) {
+            try {
+                storageService.delete(key);
+            } catch (RuntimeException exception) {
+                log.error("Falha ao limpar arquivo {}", key, exception);
+            }
         }
+    }
+
+    private void assertCanAccessNote(User requester, Note note) {
+        switch (requester.getRole().getName()) {
+            case DIRECTOR -> { }
+            case TEACHER -> assertTeacherOwnsStudent(requester.getId(), note.getStudent().getId());
+            case RESPONSIBLE -> {
+                assertResponsibleOwnsStudent(requester.getId(), note.getStudent().getId());
+                if (!note.isVisibleToResponsible()) {
+                    throw new ForbiddenException("Anotacao nao disponivel para responsaveis.");
+                }
+            }
+            default -> throw new ForbiddenException("Perfil sem permissao para acessar anotacoes.");
+        }
+    }
+
+    @Transactional(readOnly = true)
+    public NoteResponse findById(Long noteId, String requesterEmail) {
+        User requester = getActiveUser(requesterEmail);
+        Note note = getActiveNote(noteId);
+        assertCanAccessNote(requester, note);
+        return NoteResponse.from(note, bucketName);
+    }
+
+    public NoteReadResponse markAsRead(Long noteId, String requesterEmail) {
+        User requester = getActiveUser(requesterEmail);
+        Note note = getActiveNote(noteId);
+        assertCanAccessNote(requester, note);
+        LocalDateTime readAt = noteReadRepository.markAsRead(note.getId(), requester.getId());
+        return new NoteReadResponse(note.getId(), true, readAt);
+    }
+
+    @Transactional(readOnly = true)
+    public NoteReadResponse getReadStatus(Long noteId, String requesterEmail) {
+        User requester = getActiveUser(requesterEmail);
+        Note note = getActiveNote(noteId);
+        assertCanAccessNote(requester, note);
+        var readAt = noteReadRepository.findReadAt(note.getId(), requester.getId());
+        return new NoteReadResponse(note.getId(), readAt.isPresent(), readAt.orElse(null));
     }
 
     private User getActiveUser(String email) {
@@ -271,7 +347,7 @@ public class NoteService {
         Note note = noteRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Anotacao nao encontrada"));
 
-        if (note.isDeleted()) {
+        if (note.isDeleted() || note.getStudent().isDeleted()) {
             throw new ResourceNotFoundException("Anotacao nao encontrada");
         }
 
