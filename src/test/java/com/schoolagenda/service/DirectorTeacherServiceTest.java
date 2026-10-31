@@ -73,7 +73,7 @@ class DirectorTeacherServiceTest {
         when(passwordEncoder.encode(request.getPassword())).thenReturn("encoded");
         when(userRepository.save(any(User.class))).thenReturn(savedUser);
         when(teacherRepository.save(any(Teacher.class))).thenReturn(savedTeacher);
-        when(classroomRepository.save(any(Classroom.class))).thenReturn(savedClassroom);
+        when(classroomRepository.findAllByIdInAndDeletedAtIsNull(List.of(30L))).thenReturn(List.of(savedClassroom));
 
         TeacherCreateResponse response = directorTeacherService.createTeacher(request);
 
@@ -97,7 +97,7 @@ class DirectorTeacherServiceTest {
     }
 
     @Test
-    void deleteTeacherSoftDeletesUserAndClassrooms() {
+    void deleteTeacherSoftDeletesUserAndUnlinksClassrooms() {
         Teacher teacher = new Teacher();
         teacher.setId(20L);
 
@@ -107,21 +107,22 @@ class DirectorTeacherServiceTest {
         Classroom classroom = new Classroom();
         classroom.setId(30L);
 
-        when(teacherRepository.findById(20L)).thenReturn(Optional.of(teacher));
-        when(userRepository.findByIdAndDeletedAtIsNull(20L)).thenReturn(Optional.of(activeUser));
-        when(classroomRepository.findAllByTeacherIdAndDeletedAtIsNull(20L)).thenReturn(List.of(classroom));
+        teacher.setUser(activeUser);
+        classroom.getTeachers().add(teacher);
+        when(teacherRepository.findActiveById(20L)).thenReturn(Optional.of(teacher));
+        when(classroomRepository.findByTeachers_IdAndDeletedAtIsNull(20L)).thenReturn(List.of(classroom));
 
         directorTeacherService.deleteTeacher(20L);
 
         assertNotNull(activeUser.getDeletedAt());
-        assertNotNull(classroom.getDeletedAt());
-        verify(userRepository).save(activeUser);
+        org.junit.jupiter.api.Assertions.assertNull(classroom.getDeletedAt());
+        org.junit.jupiter.api.Assertions.assertTrue(classroom.getTeachers().isEmpty());
         verify(classroomRepository).saveAll(List.of(classroom));
     }
 
     @Test
     void deleteTeacherThrowsNotFoundWhenTeacherDoesNotExist() {
-        when(teacherRepository.findById(99L)).thenReturn(Optional.empty());
+        when(teacherRepository.findActiveById(99L)).thenReturn(Optional.empty());
         assertThrows(ResourceNotFoundException.class, () -> directorTeacherService.deleteTeacher(99L));
     }
 
@@ -141,15 +142,15 @@ class DirectorTeacherServiceTest {
         Classroom classroomB = new Classroom();
         classroomB.setName("Turma B");
 
-        when(teacherRepository.findAllByUserDeletedAtIsNullOrderByUserNameAsc()).thenReturn(List.of(teacher));
-        when(classroomRepository.findAllByTeacherIdAndDeletedAtIsNull(20L)).thenReturn(List.of(classroomA, classroomB));
+        when(teacherRepository.findAllWithClassrooms()).thenReturn(List.of(teacher));
+        teacher.setClassrooms(List.of(classroomA, classroomB));
 
         List<TeacherListResponse> result = directorTeacherService.listTeachers();
 
         assertEquals(1, result.size());
         assertEquals(20L, result.get(0).getTeacherId());
         assertEquals("Carlos Lima", result.get(0).getName());
-        assertEquals(List.of("Turma A", "Turma B"), result.get(0).getClassrooms());
+        assertEquals(List.of("Turma A", "Turma B"), result.get(0).getClassrooms().stream().map(com.schoolagenda.dto.classroom.ClassroomResponse::getName).toList());
     }
 
     private static TeacherCreateRequest buildRequest() {
@@ -158,7 +159,7 @@ class DirectorTeacherServiceTest {
         request.setLastName("Lima");
         request.setEmail("carlos.lima@escola.com");
         request.setPassword("123456");
-        request.setClassrooms(List.of("Turma A"));
+        request.setClassroomIds(List.of(30L));
         return request;
     }
 }

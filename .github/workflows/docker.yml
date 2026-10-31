@@ -3,13 +3,42 @@ name: Build and Push Docker Image
 on:
   push:
     branches: ["main"]
+  pull_request:
+    branches: ["main"]
 
 permissions:
   contents: read
   packages: write
 
 jobs:
+  business-tests:
+    name: Business rules tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Test business rules
+        run: bash mvnw -B -f business-tests/pom.xml clean test
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: business-test-reports
+          path: business-tests/target/surefire-reports/
+          if-no-files-found: ignore
+
   build:
+    needs: business-tests
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
 
     steps:
@@ -38,7 +67,17 @@ jobs:
         run: |
           docker push ghcr.io/brunozer0/projectschoolagenda:${{ github.sha }}
 
-      - name: Trigger Portainer webhook
-        run: curl -X POST $PORTAINER_WEBHOOK_URL
+      - name: Deploy to Northflank
         env:
-          PORTAINER_WEBHOOK_URL: ${{ secrets.PORTAINER_WEBHOOK_URL }}
+          NORTHFLANK_WEBHOOK_URL: ${{ secrets.NORTHFLANK_WEBHOOK_URL }}
+        run: |
+          if [ -z "$NORTHFLANK_WEBHOOK_URL" ]; then
+            echo "::error::Configure the NORTHFLANK_WEBHOOK_URL repository secret before deploying."
+            exit 1
+          fi
+          curl --fail --silent --show-error \
+            --connect-timeout 15 \
+            --max-time 60 \
+            --request POST \
+            --output /dev/null \
+            "$NORTHFLANK_WEBHOOK_URL"

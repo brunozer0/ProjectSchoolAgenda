@@ -6,10 +6,14 @@ WORKDIR /app
 
 COPY pom.xml .
 COPY src ./src
+COPY business-tests ./business-tests
 
 
-# os testes devem ser revistos depois.
-RUN mvn clean package -DskipTests -Dmaven.test.skip=true
+# A imagem só é gerada se as regras de negócio passarem.
+RUN mvn -B -f business-tests/pom.xml clean test
+
+# A suíte unitária já foi executada acima; o teste de contexto exige infraestrutura.
+RUN mvn -B clean package -Dmaven.test.skip=true
 
 
 # ===== RUNTIME STAGE =====
