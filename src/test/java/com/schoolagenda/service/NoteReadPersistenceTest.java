@@ -20,8 +20,8 @@ class NoteReadPersistenceTest {
         dataSource = new JdbcDataSource();
         dataSource.setURL("jdbc:h2:mem:" + UUID.randomUUID() + ";MODE=MySQL;DB_CLOSE_DELAY=-1");
         jdbc = new JdbcTemplate(dataSource);
-        jdbc.execute("CREATE TABLE notes(id BIGINT PRIMARY KEY)");
-        jdbc.execute("CREATE TABLE users(id BIGINT PRIMARY KEY)");
+        jdbc.execute("CREATE TABLE notes(id BIGINT UNSIGNED PRIMARY KEY)");
+        jdbc.execute("CREATE TABLE users(id BIGINT UNSIGNED PRIMARY KEY)");
         jdbc.update("INSERT INTO notes VALUES (1)");
         jdbc.update("INSERT INTO users VALUES (10), (20)");
         var migration = new ResourceDatabasePopulator(new ClassPathResource("db/note-reads.sql"));

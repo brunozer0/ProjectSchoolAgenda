@@ -14,6 +14,21 @@ jobs:
   business-tests:
     name: Business rules tests
     runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: isolated-test-password
+          MYSQL_DATABASE: schoolagenda_test
+          MYSQL_USER: schoolagenda_test
+          MYSQL_PASSWORD: isolated-test-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,6 +41,10 @@ jobs:
           cache: maven
 
       - name: Test business rules
+        env:
+          MYSQL_TEST_URL: jdbc:mysql://127.0.0.1:3306/schoolagenda_test?useSSL=false&allowPublicKeyRetrieval=true
+          MYSQL_TEST_USER: schoolagenda_test
+          MYSQL_TEST_PASSWORD: isolated-test-password
         run: bash mvnw -B -f business-tests/pom.xml clean test
 
       - name: Upload test reports

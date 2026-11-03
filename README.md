@@ -110,7 +110,7 @@ Nenhuma consulta marca um bilhete como lido. Os retornos existentes de listagem,
 - `GET /api/notes/{id}/read`: consulta somente a leitura do usuário autenticado, sem gravar.
 - Ambos retornam `{ "noteId": 123, "read": true, "readAt": "2026-10-30T12:00:00" }`. Antes da leitura, `read` é `false` e `readAt` é `null`.
 - Acesso exige aluno ativo e vínculo com a turma (professor) ou vínculo familiar e bilhete visível (responsável); direção tem acesso administrativo.
-- A tabela `note_reads` é criada automaticamente pelo script idempotente `src/main/resources/db/note-reads.sql` na inicialização. O usuário do banco precisa de permissão para criar essa tabela. Nenhuma tabela existente é alterada e não há preenchimento retroativo de leituras.
+- A tabela `note_reads` é criada automaticamente pelo script idempotente `src/main/resources/db/note-reads.sql` na inicialização. As referências `note_id` e `user_id` usam `BIGINT UNSIGNED`, como os IDs das tabelas existentes `notes` e `users`. O usuário do banco precisa de permissão para criar essa tabela. Nenhuma tabela existente é alterada e não há preenchimento retroativo de leituras.
 - Professores desvinculados da turma não mantêm acesso ao histórico, mesmo sendo autores; essa regra continua baseada no vínculo atual.
 
 
