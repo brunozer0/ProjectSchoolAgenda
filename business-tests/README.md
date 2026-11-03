@@ -56,3 +56,11 @@ O `Dockerfile` também executa a suíte antes de empacotar a aplicação, proteg
 `NotePermissionsTest` valida status versus autoria, visibilidade, consulta individual, vínculos e bloqueio de registros excluídos. `NoteReadPersistenceTest` executa o SQL em H2, verifica inicialização repetida, leitura por usuário e gravações simultâneas. `NoteUploadTransactionTest` exercita o serviço através do interceptor transacional do Spring, com banco H2 real, falhas nos anexos, rollback externo e limpeza após commit/rollback.
 
 `NoteHttpCompatibilityTest` verifica os caminhos HTTP e a compatibilidade da listagem e do PATCH existentes com MockMvc; as permissões são verificadas nos testes dos serviços, não nesse MockMvc sem filtros de segurança.
+
+### Compatibilidade com MySQL e IDs unsigned
+
+O commit `d7f5bcc` (30/10/2026) introduziu a inicialização de `note_reads` com IDs signed, incompatíveis com os IDs `BIGINT UNSIGNED` de `notes` e `users` no banco existente. O script agora usa `BIGINT UNSIGNED` nas duas referências; os tipos das tabelas existentes não são alterados. H2 em modo MySQL aceita `UNSIGNED`, mas não reproduz a verificação de compatibilidade das chaves estrangeiras do MySQL.
+
+`NoteReadMySqlTest` executa o script real contra MySQL, verifica repetição da inicialização, preservação dos registros e rejeição de referências inexistentes. O workflow executa esse teste em um serviço MySQL 8 descartável antes de publicar a imagem.
+
+Para executá-lo localmente, forneça `MYSQL_TEST_URL`, `MYSQL_TEST_USER` e `MYSQL_TEST_PASSWORD` ao comando da suíte. **Use exclusivamente um banco descartável**: o teste recria `notes`, `users` e `note_reads`. Sem `MYSQL_TEST_URL`, esse teste é ignorado e os demais continuam executando normalmente. Nenhuma credencial de produção é necessária.
